@@ -53,3 +53,32 @@ export async function deleteExpense(id: number) {
 
 	revalidatePath("/app/dashboard");
 }
+
+import Stripe from "stripe";
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+	apiVersion: "2025-01-27.acacia",
+});
+
+export async function createCheckoutSession() {
+	const { isAuthenticated, getUser } = getKindeServerSession();
+	if (!(await isAuthenticated())) {
+		return redirect("/api/auth/login");
+	}
+
+	const user = await getUser();
+	const session = await stripe.checkout.sessions.create({
+		customer_email: user.email!,
+		client_reference_id: user.id,
+		line_items: [
+			{
+				price: "price_1QntGlREb2CugnS3Qy0cbXxp",
+				quantity: 1,
+			},
+		],
+		mode: "payment",
+		success_url: "http://localhost:3000/app/dashboard",
+		cancel_url: "http://localhost:3000",
+	});
+
+	redirect(session.url!);
+}
